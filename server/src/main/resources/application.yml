@@ -1,0 +1,54 @@
+server:
+  port: ${SERVER_PORT:18443}
+
+spring:
+  application:
+    name: ofd-marking-server
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://127.0.0.1:5432/ofd_marking}
+    username: ${DB_USER:ofd}
+    password: ${DB_PASSWORD:ofd}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+ofd:
+  mode: ${OFD_MODE:mock} # mock | live
+  base-url: ${OFD_BASE_URL:https://ofd.ru}
+  api-key: ${OFD_API_KEY:}
+  inn: ${OFD_INN:7707083893}
+  assume-receipts-info-all: true
+  filter-time-field: DOC_DATE_TIME
+  rate-limit-ms: 2000
+  max-window-days: 30
+  max-depth-days: 90
+  max-retries: 5
+  retry-backoff-ms: 2000
+  scheduler:
+    enabled: true
+    cron: "0 */15 * * * *" # каждые 15 минут
+  sync-on-startup: true
+
+app:
+  client-api-key: ${CLIENT_API_KEY:}
+  default-worst-threshold-percent: 25.0
+
+logging:
+  level:
+    root: INFO
+    ru.ofd.marking: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] %logger{36} - %msg%n"

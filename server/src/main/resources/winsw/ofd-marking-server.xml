@@ -1,0 +1,20 @@
+<!-- WinSW service definition. Place next to ofd-marking-server.exe / jar on Windows Server. -->
+<service>
+  <id>ofd-marking-server</id>
+  <name>OFD Marking Share Server</name>
+  <description>Сбор чеков ОФД.ру и расчёт доли маркированных по ТТ</description>
+  <executable>java</executable>
+  <arguments>-Xms512m -Xmx2g -jar "%BASE%\ofd-marking-server.jar" --spring.config.additional-location=optional:file:%BASE%\application-prod.yml</arguments>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>8</keepFiles>
+  </log>
+  <onfailure action="restart" delay="10 sec"/>
+  <env name="OFD_MODE" value="live"/>
+  <env name="OFD_API_KEY" value="SET_IN_SECURE_ENV"/>
+  <env name="OFD_INN" value="XXXXXXXXXX"/>
+  <env name="DB_URL" value="jdbc:postgresql://127.0.0.1:5432/ofd_marking"/>
+  <env name="DB_USER" value="ofd"/>
+  <env name="DB_PASSWORD" value="CHANGE_ME"/>
+  <env name="SERVER_PORT" value="18443"/>
+</service>

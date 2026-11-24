@@ -1,0 +1,212 @@
+[
+  {
+    "Id": "aaaaaaaa-1111-1111-1111-aaaaaaaaaaaa",
+    "CDateUtc": "2026-11-01T08:00:00",
+    "Tag": 3,
+    "IsBso": false,
+    "IsCorrection": false,
+    "OperationType": "Income",
+    "UserInn": "7707083893",
+    "KktRegNumber": "0001000100010001",
+    "FnNumber": "9960440301019864",
+    "DocNumber": 1001,
+    "DocDateTime": "2026-11-01T11:00:00",
+    "DocShiftNumber": 10,
+    "DecimalFiscalSign": "1018061843",
+    "ReceiptNumber": 1,
+    "DocRawId": "aaaaaaaa-1111-1111-1111-aaaaaaaaaaaa",
+    "TotalSumm": 45000,
+    "Items": [
+      {
+        "Name": "Молоко 3.2% 1л",
+        "Price": 8900,
+        "Quantity": 1,
+        "Total": 8900,
+        "SubjectType": 33,
+        "ProductCode": { "Code_GS_1M": "0104600605023506215ABCDE" },
+        "NDS_Rate": 2
+      },
+      {
+        "Name": "Хлеб белый",
+        "Price": 4500,
+        "Quantity": 1,
+        "Total": 4500,
+        "SubjectType": 1,
+        "ProductCode": {},
+        "NDS_Rate": 2
+      },
+      {
+        "Name": "Вода негазированная 1.5л",
+        "Price": 5500,
+        "Quantity": 1,
+        "Total": 5500,
+        "SubjectType": 1,
+        "ProductCode": {},
+        "NDS_Rate": 2
+      }
+    ]
+  },
+  {
+    "Id": "bbbbbbbb-2222-2222-2222-bbbbbbbbbbbb",
+    "CDateUtc": "2026-11-01T09:00:00",
+    "Tag": 3,
+    "IsBso": false,
+    "IsCorrection": false,
+    "OperationType": "Income",
+    "UserInn": "7707083893",
+    "KktRegNumber": "0001000100010001",
+    "FnNumber": "9960440301019864",
+    "DocNumber": 1002,
+    "DocDateTime": "2026-11-01T12:00:00",
+    "DocShiftNumber": 10,
+    "DecimalFiscalSign": "1018061844",
+    "ReceiptNumber": 2,
+    "DocRawId": "bbbbbbbb-2222-2222-2222-bbbbbbbbbbbb",
+    "TotalSumm": 32000,
+    "Items": [
+      {
+        "Name": "Сок яблочный 1л",
+        "Price": 12000,
+        "Quantity": 1,
+        "Total": 12000,
+        "SubjectType": 1,
+        "ProductCode": {},
+        "NDS_Rate": 2
+      },
+      {
+        "Name": "Сахар 1кг",
+        "Price": 8000,
+        "Quantity": 1,
+        "Total": 8000,
+        "SubjectType": 1,
+        "ProductCode": {},
+        "NDS_Rate": 2
+      },
+      {
+        "Name": "Макароны 450г",
+        "Price": 12000,
+        "Quantity": 1,
+        "Total": 12000,
+        "SubjectType": 1,
+        "ProductCode": {},
+        "NDS_Rate": 2
+      }
+    ]
+  },
+  {
+    "Id": "cccccccc-3333-3333-3333-cccccccccccc",
+    "CDateUtc": "2026-11-01T10:00:00",
+    "Tag": 3,
+    "IsBso": false,
+    "IsCorrection": false,
+    "OperationType": "Income",
+    "UserInn": "7707083893",
+    "KktRegNumber": "0002000200020002",
+    "FnNumber": "9960440301019865",
+    "DocNumber": 2001,
+    "DocDateTime": "2026-11-01T13:00:00",
+    "DocShiftNumber": 5,
+    "DecimalFiscalSign": "2018061843",
+    "ReceiptNumber": 1,
+    "DocRawId": "cccccccc-3333-3333-3333-cccccccccccc",
+    "TotalSumm": 250000,
+    "Items": [
+      {
+        "Name": "Сигареты Winston Blue",
+        "Price": 250000,
+        "Quantity": 1,
+        "Total": 250000,
+        "SubjectType": 31,
+        "ProductCode": { "Code_GS_1M": "0104606203091234215XYZ99" },
+        "NDS_Rate": 1
+      }
+    ]
+  },
+  {
+    "Id": "dddddddd-4444-4444-4444-dddddddddddd",
+    "CDateUtc": "2026-11-01T11:00:00",
+    "Tag": 3,
+    "IsBso": false,
+    "IsCorrection": false,
+    "OperationType": "Income",
+    "UserInn": "7707083893",
+    "KktRegNumber": "0002000200020002",
+    "FnNumber": "9960440301019865",
+    "DocNumber": 2002,
+    "DocDateTime": "2026-11-01T14:00:00",
+    "DocShiftNumber": 5,
+    "DecimalFiscalSign": "2018061844",
+    "ReceiptNumber": 2,
+    "DocRawId": "dddddddd-4444-4444-4444-dddddddddddd",
+    "TotalSumm": 18000,
+    "Items": [
+      {
+        "Name": "Пиво Балтика 0.5л",
+        "Price": 9000,
+        "Quantity": 2,
+        "Total": 18000,
+        "SubjectType": 33,
+        "ProductCode": { "Code_KMK": "SHORTMARKCODE01" },
+        "NDS_Rate": 1
+      }
+    ]
+  },
+  {
+    "Id": "eeeeeeee-5555-5555-5555-eeeeeeeeeeee",
+    "CDateUtc": "2026-11-01T12:00:00",
+    "Tag": 31,
+    "IsBso": false,
+    "IsCorrection": true,
+    "OperationType": "Income",
+    "UserInn": "7707083893",
+    "KktRegNumber": "0003000300030003",
+    "FnNumber": "9960440301019866",
+    "DocNumber": 3001,
+    "DocDateTime": "2026-11-01T15:00:00",
+    "DocShiftNumber": 2,
+    "DecimalFiscalSign": "3018061843",
+    "ReceiptNumber": 1,
+    "DocRawId": "eeeeeeee-5555-5555-5555-eeeeeeeeeeee",
+    "TotalSumm": 50000,
+    "Items": [
+      {
+        "Name": "Разливное пиво светлое 1л",
+        "Price": 25000,
+        "Quantity": 2,
+        "Total": 50000,
+        "SubjectType": 1,
+        "ProductCode": {},
+        "NDS_Rate": 1
+      }
+    ]
+  },
+  {
+    "Id": "ffffffff-6666-6666-6666-ffffffffffff",
+    "CDateUtc": "2026-11-01T13:00:00",
+    "Tag": 3,
+    "IsBso": false,
+    "IsCorrection": false,
+    "OperationType": "Income",
+    "UserInn": "7707083893",
+    "KktRegNumber": "0003000300030003",
+    "FnNumber": "9960440301019866",
+    "DocNumber": 3002,
+    "DocDateTime": "2026-11-01T16:00:00",
+    "DocShiftNumber": 2,
+    "DecimalFiscalSign": "3018061844",
+    "ReceiptNumber": 2,
+    "DocRawId": "ffffffff-6666-6666-6666-ffffffffffff",
+    "TotalSumm": 99000,
+    "Items": [
+      {
+        "Name": "Жидкость для вейпа 30мл",
+        "Price": 99000,
+        "Quantity": 1,
+        "Total": 99000,
+        "SubjectType": 33,
+        "ProductCode": { "Code_GS_1M": "0104612345678901215NIC01" },
+        "NDS_Rate": 1
+      }
+    ]
+  }
+]
