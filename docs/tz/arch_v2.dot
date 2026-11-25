@@ -6,20 +6,20 @@ digraph G {
   ofd [label="ОФД.ру API\nofd.ru/api/integration/v2\n(лимит 1 запрос / 2 с, окно ≤ 30 сут, глубина 90 сут)", fillcolor="#FFF4E0", color="#B26B00"];
 
   subgraph cluster_rdp {
-    label="RDP клиентов (Windows; до 6 сейчас, N в будущем)"; fontname="DejaVu Sans"; fontsize=10; style="dashed"; color="#7A869A";
-    a1 [label="Агент 1\nключ API ОФД + ИНН (agent.yml)\nлокальный кэш H2, :18500"];
-    a2 [label="Агент 2\nключ API ОФД + ИНН\nH2, :18500"];
-    an [label="Агент 3…6…N\nключ API ОФД + ИНН\nH2, :18500"];
+    label="RDP клиентов: Windows Server 2019, служба ofd-agent (Java 21 в комплекте, без Docker); 6 сейчас, N в будущем"; fontname="DejaVu Sans"; fontsize=10; style="dashed"; color="#7A869A";
+    a1 [label="Агент 1 (постоянный IP)\nсвой ключ API ОФД + ИНН (agent.yml)\nлокальный кэш H2, :18500"];
+    a2 [label="Агент 2\nсвой ключ API ОФД + ИНН\nH2, :18500"];
+    an [label="Агент 3…6…N\nсвой ключ API ОФД + ИНН\nH2, :18500"];
   }
 
-  central [label="Центральное приложение (служба, Spring Boot :18443)\nЛК: реестр агентов (имя, IP, порт, токен, вкл.)\nопрос по расписанию, дедупликация, метрики, Excel", fillcolor="#E6F4EA", color="#1E6B34"];
+  central [label="Центральное приложение 192.168.31.196 (служба, Spring Boot :18443)\nЛК: реестр агентов (имя, IP, порт, токен, вкл.)\nопрос по расписанию, дедупликация, метрики, Excel", fillcolor="#E6F4EA", color="#1E6B34"];
   db [label="PostgreSQL 16\nчеки, позиции, ТТ, ККТ, агенты, курсоры", shape=cylinder, fillcolor="#F2F2F2"];
   client [label="Клиент JavaFX (до 2 пользователей)\nдашборд ТТ, худшие ТТ, группы, чеки, «Агенты»", fillcolor="#F3ECFA", color="#5B2C83"];
 
   a1 -> ofd [label=" HTTPS, AuthToken", dir=forward];
   a2 -> ofd;
   an -> ofd;
-  central -> a1 [label=" GET /agent/v1/*\n X-Agent-Token,\n только с IP центра"];
+  central -> a1 [label=" GET /agent/v1/* напрямую\n X-Agent-Token,\n только с 192.168.31.196\n (белый список, меняется\n без перезапуска)"];
   central -> a2;
   central -> an;
   central -> db [dir=both, label=" JDBC"];
