@@ -129,6 +129,7 @@ VPN (NetBird/WireGuard). Агенту нужен исходящий HTTPS к `of
    ждёт окончания (до 3 минут) и забирает новые чеки.
 
 Контракт API агента: [`docs/agent-api.md`](docs/agent-api.md).
+Техническое задание v2.0: [`docs/tz/TZ_v2.0.md`](docs/tz/TZ_v2.0.md) (Word: `docs/tz/ТЗ_v2.0.docx`).
 
 ## Безопасность
 
