@@ -20,15 +20,24 @@ public class ReceiptIngestService {
     }
 
     @Transactional
-    public boolean ingest(OfdReceiptDto dto, Kkt kkt) {
-        String rawId = dto.getDocRawId() != null ? dto.getDocRawId() : dto.getId();
+    public boolean ingest(OfdReceiptDto dto, Kkt kkt, Long agentId) {
+        String rawId = dto.getDocRawId() != null && !dto.getDocRawId().isBlank() ? dto.getDocRawId() : dto.getId();
         if (rawId == null || receiptRepository.existsByOfdRawId(rawId)) {
+            return false;
+        }
+        // Один и тот же фискальный документ мог прийти от двух агентов с разным Id в ОФД
+        if (dto.getFnNumber() != null && dto.getDocNumber() != null
+                && receiptRepository.existsByFnNumberAndDocNumber(dto.getFnNumber(), dto.getDocNumber())) {
             return false;
         }
         Receipt receipt = mapper.toReceipt(dto, kkt.getTradePoint());
         if (receipt.getKktRegNumber() == null) {
             receipt.setKktRegNumber(kkt.getRegNumber());
         }
+        if (receipt.getUserInn() == null) {
+            receipt.setUserInn(kkt.getInn());
+        }
+        receipt.setAgentId(agentId);
         receiptRepository.save(receipt);
         return true;
     }

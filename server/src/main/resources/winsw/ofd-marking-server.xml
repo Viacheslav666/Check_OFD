@@ -2,7 +2,7 @@
 <service>
   <id>ofd-marking-server</id>
   <name>OFD Marking Share Server</name>
-  <description>Сбор чеков ОФД.ру и расчёт доли маркированных по ТТ</description>
+  <description>Центральное приложение: опрос агентов ОФД и расчёт доли маркированных чеков по ТТ</description>
   <executable>java</executable>
   <arguments>-Xms512m -Xmx2g -jar "%BASE%\ofd-marking-server.jar" --spring.config.additional-location=optional:file:%BASE%\application-prod.yml</arguments>
   <log mode="roll-by-size">
@@ -10,9 +10,7 @@
     <keepFiles>8</keepFiles>
   </log>
   <onfailure action="restart" delay="10 sec"/>
-  <env name="OFD_MODE" value="live"/>
-  <env name="OFD_API_KEY" value="SET_IN_SECURE_ENV"/>
-  <env name="OFD_INN" value="XXXXXXXXXX"/>
+  <!-- Ключа ОФД здесь нет: он хранится на агентах. Агентов добавляют в клиенте, вкладка «Агенты». -->
   <env name="DB_URL" value="jdbc:postgresql://127.0.0.1:5432/ofd_marking"/>
   <env name="DB_USER" value="ofd"/>
   <env name="DB_PASSWORD" value="CHANGE_ME"/>

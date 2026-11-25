@@ -81,6 +81,59 @@ public class ApiClient {
         post("/api/sync/trigger", "{}");
     }
 
+    // ---------- Агенты (ЛК приложения) ----------
+
+    public List<Map<String, Object>> agents() {
+        return getList("/api/agents");
+    }
+
+    public JsonNode createAgent(Map<String, Object> body) {
+        return send("POST", "/api/admin/agents", body);
+    }
+
+    public JsonNode updateAgent(long id, Map<String, Object> body) {
+        return send("PUT", "/api/admin/agents/" + id, body);
+    }
+
+    public void deleteAgent(long id) {
+        send("DELETE", "/api/admin/agents/" + id, null);
+    }
+
+    public JsonNode testAgent(long id) {
+        return send("POST", "/api/admin/agents/" + id + "/test", null);
+    }
+
+    public JsonNode pollAgent(long id) {
+        return send("POST", "/api/admin/agents/" + id + "/poll", null);
+    }
+
+    public JsonNode resetAgentCursor(long id) {
+        return send("POST", "/api/admin/agents/" + id + "/reset-cursor", null);
+    }
+
+    private JsonNode send(String method, String path, Object body) {
+        try {
+            String json = body == null ? "{}" : mapper.writeValueAsString(body);
+            HttpResponse<String> resp = http.send(request(method, path, json), HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() >= 400) {
+                String msg = resp.body();
+                try {
+                    JsonNode err = mapper.readTree(resp.body());
+                    if (err.hasNonNull("message") && !err.get("message").asText().isBlank()) {
+                        msg = err.get("message").asText();
+                    }
+                } catch (Exception ignored) {
+                }
+                throw new IllegalStateException("HTTP " + resp.statusCode() + ": " + msg);
+            }
+            return resp.body() == null || resp.body().isBlank() ? mapper.createObjectNode() : mapper.readTree(resp.body());
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException("Ошибка запроса " + path + ": " + e.getMessage(), e);
+        }
+    }
+
     public byte[] export(String type) {
         return getBytes("/api/export/" + type + "?from=" + enc(from()) + "&to=" + enc(to()));
     }
@@ -157,6 +210,9 @@ public class ApiClient {
         }
         if ("GET".equals(method)) {
             return b.GET().build();
+        }
+        if ("DELETE".equals(method)) {
+            return b.DELETE().build();
         }
         if ("PUT".equals(method)) {
             return b.header("Content-Type", "application/json")

@@ -13,6 +13,10 @@
 
     <dependencies>
         <dependency>
+            <groupId>ru.ofd.marking</groupId>
+            <artifactId>ofd-marking-contract</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
@@ -71,8 +75,9 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.wiremock</groupId>
-            <artifactId>wiremock-standalone</artifactId>
+            <!-- Реальный агент в mock-режиме поднимается внутри интеграционных тестов -->
+            <groupId>ru.ofd.marking</groupId>
+            <artifactId>ofd-agent</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

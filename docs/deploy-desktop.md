@@ -1,11 +1,8 @@
-# Desktop без Docker (рекомендуется для RDP)
+# Центральное приложение на Windows без Docker
 
-## Зачем на каждой машине свой пакет
-
-Запросы к ОФД.ру делает **локальный сервер** внутри пакета.  
-Клиент JavaFX только UI → `http://127.0.0.1:18443`.
-
-Ставите zip на каждый RDP-хост → исходящий IP в ОФД = IP этой машины.
+> С версии 2.0 к ОФД ходят **агенты** на RDP клиентов (см. [`deploy-agent.md`](deploy-agent.md)).
+> Этот пакет — центральное приложение (сервер на встроенной H2 + клиент JavaFX) для одной машины.
+> Ключ ОФД в нём не нужен: агентов добавляют во вкладке «Агенты».
 
 ## Требования на ПК
 
@@ -25,9 +22,7 @@
 irm https://raw.githubusercontent.com/Viacheslav666/Check_OFD/main/scripts/windows/Install-Desktop.ps1 -OutFile Install-Desktop.ps1
 .\Install-Desktop.ps1
 cd $env:USERPROFILE\OFD-Marking
-# live:
-copy ofd-env.example.bat ofd-env.bat
-notepad ofd-env.bat
+# при необходимости: copy central-env.example.bat central-env.bat
 .\Start-OFD.bat
 ```
 

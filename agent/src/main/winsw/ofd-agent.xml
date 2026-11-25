@@ -1,0 +1,22 @@
+<!--
+  WinSW: служба Windows для агента ОФД.
+  Рядом должны лежать: ofd-agent.exe (переименованный WinSW-x64.exe), ofd-agent.jar, agent.yml.
+  Установка:  ofd-agent.exe install   Запуск: ofd-agent.exe start   Статус: ofd-agent.exe status
+-->
+<service>
+  <id>ofd-agent</id>
+  <name>OFD Agent (сбор чеков ОФД.ру)</name>
+  <description>Агент: собирает чеки из ОФД.ру по ключу API этого клиента и отдаёт их центральному приложению</description>
+  <executable>java</executable>
+  <arguments>-Xms64m -Xmx384m -XX:+UseSerialGC -Dfile.encoding=UTF-8 -jar "%BASE%\ofd-agent.jar"</arguments>
+  <workingdirectory>%BASE%</workingdirectory>
+  <startmode>Automatic</startmode>
+  <delayedAutoStart>true</delayedAutoStart>
+  <onfailure action="restart" delay="10 sec"/>
+  <onfailure action="restart" delay="60 sec"/>
+  <resetfailure>1 hour</resetfailure>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>5</keepFiles>
+  </log>
+</service>

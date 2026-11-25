@@ -1,156 +1,170 @@
-# Доля маркированных чеков по торговым точкам (ОФД.ру)
+# Доля маркированных чеков по торговым точкам (ОФД.ру) — v2.0, центр + агенты
 
-Сервис + desktop-клиент JavaFX: сбор чеков из API [ОФД.ру](https://ofd.ru/razrabotchikam/ofd), расчёт доли чеков с маркированными товарами (ФФД 1.2: тег 1163 и/или SubjectType 31/33) по торговым точкам.
+Система собирает чеки из API [ОФД.ру](https://ofd.ru/razrabotchikam/ofd), делит их на чеки с маркировкой и без
+(ФФД 1.2: тег 1163 и/или SubjectType 31/33) и показывает долю маркированных чеков по торговым точкам (ТТ),
+худшие ТТ (по умолчанию < 25 %), товарные группы и состав чеков.
 
-**Для RDP / разных IP в ОФД:** ставьте **desktop-пакет на каждую машину** (локальный сервер + H2 + JavaFX). Docker не обязателен. См. [`docs/deploy-desktop.md`](docs/deploy-desktop.md).
+Начиная с v2.0 сбор идёт **через агентов**: агент ставится на RDP каждого клиента, хранит у себя ключ API ОФД
+и копит чеки локально. Центральное приложение само обращается к агентам по IP из своего ЛК, забирает новые чеки
+и считает статистику как раньше. Ключей ОФД в центре нет.
 
-## Состав
+```
+                        ┌──────────────────────── ОФД.ру API (ofd.ru/api/integration/v2) ───────────────┐
+                        │  AuthToken = ключ клиента, 1 запрос / 2 с, окно ≤ 30 сут, глубина 90 сут       │
+                        └──────▲──────────────────▲──────────────────────────────────▲───────────────────┘
+                               │ HTTPS            │                                  │
+   RDP клиента 1        ┌──────┴──────┐   ┌───────┴─────┐                     ┌──────┴──────┐
+   (Windows)            │  Агент 1    │   │  Агент 2    │        …            │  Агент 6…N  │
+                        │ ключ ОФД,   │   │ ключ ОФД,   │                     │ ключ ОФД,   │
+                        │ H2, :18500  │   │ H2, :18500  │                     │ H2, :18500  │
+                        └──────▲──────┘   └──────▲──────┘                     └──────▲──────┘
+                               │ GET /agent/v1/* (X-Agent-Token, только с IP центра)  │
+                               └───────────────┬──┴────────────────────────────────────┘
+                                   ┌───────────┴────────────┐       ┌──────────────┐
+                                   │ Центральное приложение │──────▶│ PostgreSQL   │
+                                   │ Spring Boot :18443     │       └──────────────┘
+                                   │ реестр агентов (ЛК)    │
+                                   └───────────▲────────────┘
+                                               │ /api/* (X-Api-Key)
+                                   ┌───────────┴────────────┐
+                                   │ JavaFX-клиент (≤2 польз.)│
+                                   └────────────────────────┘
+```
+
+## Модули
 
 | Модуль | Назначение |
 |---|---|
-| `server/` | Spring Boot 21, Flyway, сборщик ОФД, REST (Postgres или встроенная H2) |
-| `client/` | JavaFX-клиент (дашборд, рейтинг, группы, матрица, чеки, Excel) |
-| `docs/` | ТЗ→requirements, API mapping, деплой |
+| `contract/` | Общие DTO: формат ОФД API и контракт HTTP API агента (`AgentApi`) |
+| `agent/` | **Агент** (Spring Boot, H2 в файле, ~40 МБ RAM-heap): сбор из ОФД, локальный кэш, API для центра, IP-allowlist + токен |
+| `server/` | **Центральное приложение**: реестр агентов, опрос по расписанию, PostgreSQL/H2 + Flyway, аналитика, Excel |
+| `client/` | JavaFX-клиент: дашборд ТТ, худшие ТТ, группы, матрица, чеки, **Агенты (ЛК)**, настройки |
+| `docs/` | Контракт агента, развёртывание, требования |
 
-## Windows desktop (без Docker) — основной вариант
-
-1. Нужен только **JDK 21+** (Temurin) в PATH.
-2. Скачайте `ofd-marking-desktop-windows.zip` из [Releases](https://github.com/Viacheslav666/Check_OFD/releases) **или**:
-
-```powershell
-irm https://raw.githubusercontent.com/Viacheslav666/Check_OFD/main/scripts/windows/Install-Desktop.ps1 -OutFile Install-Desktop.ps1
-.\Install-Desktop.ps1
-cd $env:USERPROFILE\OFD-Marking
-copy ofd-env.example.bat ofd-env.bat   # для live — пропишите OFD_API_KEY
-.\Start-OFD.bat
-```
-
-Данные: `%LOCALAPPDATA%\OFD-Marking\data`. Стоп: `Stop-OFD.bat`.
-
-CI/CD: каждый push в `main` публикует новый desktop zip в Releases.
-
-## Docker (опционально, если Docker уже есть)
-
-На машине с IP `10.10.50.2` или `192.168.31.196`:
+## Быстрый демо-запуск (Docker): центр + PostgreSQL + 2 mock-агента
 
 ```bash
-git clone https://github.com/Viacheslav666/Check_OFD.git
-cd Check_OFD
-
-# mock: PostgreSQL + API в контейнерах
+git clone https://github.com/Viacheslav666/Check_OFD.git && cd Check_OFD
 docker compose up -d --build
-
-# проверка
-curl -s http://127.0.0.1:18443/api/health
-# с другого ПК:
-# curl -s http://10.10.50.2:18443/api/health
-# curl -s http://192.168.31.196:18443/api/health
+curl -s http://127.0.0.1:18443/api/agents        # оба агента в состоянии ONLINE
+curl -s http://127.0.0.1:18443/api/trade-points   # % маркированных по ТТ
 ```
 
-Клиент JavaFX — на ПК (не в Docker):
+Без Docker то же самое: `./scripts/run-demo.sh` (центр на H2 + 2 агента на портах 18501/18502).
+Клиент: `OFD_CLIENT_SERVER_URL=http://127.0.0.1:18443 ./scripts/run-client.sh`.
+
+## Установка агента на RDP клиента (Windows)
+
+1. Установите **Java 21** (Eclipse Temurin JRE) — `java -version` должен показать 21+.
+2. Получите ключ API в [ЛК ОФД.ру](https://lk.ofd.ru): **Настройки → Управление передачей данных** →
+   заявка на доступ к API → ключ на вкладке «Ключи доступа к API ОФД» (действует 1 год).
+3. Скачайте `ofd-agent-windows.zip` из [Releases](https://github.com/Viacheslav666/Check_OFD/releases)
+   (или соберите: `scripts/windows/package-agent.ps1`) и распакуйте.
+4. PowerShell **от администратора** в папке пакета:
+
+   ```powershell
+   .\Install-Agent.ps1 -CentralIp 10.10.50.2 -ApiKey "<ключ из ЛК ОФД>" -Inn 635001808204 -Name "РДП Самара"
+   ```
+
+   Скрипт: копирует агент в `C:\OFD-Agent`, пишет `agent.yml` (ключ ОФД, ИНН, токен, белый список IP),
+   ограничивает права на папку, ставит службу Windows `ofd-agent` (WinSW, автозапуск, перезапуск при сбое)
+   и открывает порт 18500 в брандмауэре **только для IP центра**. В конце выводит IP, порт и токен.
+5. В центральном приложении: вкладка **«Агенты»** → «Новый» → имя, IP, порт `18500`, токен → «Сохранить» →
+   «Проверить связь».
+
+Ручная настройка: пример конфигурации — [`deploy/agent/agent.yml.example`](deploy/agent/agent.yml.example).
+Linux/Docker на стороне клиента: образ `Dockerfile.agent`, переменные `AGENT_*` и `OFD_*`
+(см. сервисы `agent1`/`agent2` в `docker-compose.yml`). Подробно: [`docs/deploy-agent.md`](docs/deploy-agent.md).
+
+Основные параметры агента (`agent.yml` или переменные окружения):
+
+| Параметр | Переменная | По умолчанию | Смысл |
+|---|---|---|---|
+| `server.port` | `AGENT_PORT` | 18500 | Порт API агента |
+| `agent.name` | `AGENT_NAME` | ofd-agent | Имя (видно в ЛК центра) |
+| `agent.token` | `AGENT_TOKEN` | пусто → генерируется в `data/agent-token.txt` | Общий секрет с центром, ≥ 16 символов |
+| `agent.allowed-ips` | `AGENT_ALLOWED_IPS` | 127.0.0.1,::1 | IP/подсети центра; остальные получают 403 |
+| `ofd.mode` | `OFD_MODE` | mock | `live` — боевой ОФД, `mock` — демо |
+| `ofd.api-key` | `OFD_API_KEY` | — | Ключ API ОФД (хранится только на агенте) |
+| `ofd.inn` | `OFD_INN` | — | ИНН, несколько — через запятую |
+| `ofd.scheduler.cron` | `AGENT_COLLECT_CRON` | каждые 15 мин | Расписание сбора из ОФД |
+
+## Установка центрального приложения
+
+**Docker (Linux-сервер, например `10.10.50.2`):** оставьте в `docker-compose.yml` сервисы `db` и `server`
+(демо-агенты не нужны) и задайте `CENTRAL_BOOTSTRAP_AGENTS=` пустым:
 
 ```bash
-OFD_CLIENT_SERVER_URL=http://10.10.50.2:18443 ./scripts/run-client.sh
-# или
-OFD_CLIENT_SERVER_URL=http://192.168.31.196:18443 ./scripts/run-client.sh
+CENTRAL_BOOTSTRAP_AGENTS= docker compose up -d --build db server
 ```
 
-Порт на хосте (если 18443 занят; **8080 не трогайте**, если там монитор):
+**Windows без Docker:** пакет `ofd-marking-desktop-windows.zip` (центр на H2 + клиент) — `Start-OFD.bat`,
+см. [`docs/deploy-desktop.md`](docs/deploy-desktop.md). Для PostgreSQL — служба WinSW
+(`server/src/main/resources/winsw/ofd-marking-server.xml`, переменные `DB_*`).
 
-```bash
-OFD_HOST_PORT=18444 docker compose up -d --build
-```
+Параметры центра:
 
-Live ОФД:
+| Переменная | По умолчанию | Смысл |
+|---|---|---|
+| `SERVER_PORT` | 18443 | Порт API центра |
+| `DB_URL`, `DB_USER`, `DB_PASSWORD` | localhost/ofd | PostgreSQL |
+| `CLIENT_API_KEY` | пусто | Ключ клиента JavaFX (`X-Api-Key`) к `/api/*` |
+| `CENTRAL_POLL_CRON` | `0 */5 * * * *` | Как часто центр опрашивает агентов |
+| `CENTRAL_BOOTSTRAP_AGENTS` | пусто | Демо: `имя\|хост\|порт\|токен;…` |
 
-```bash
-OFD_MODE=live OFD_API_KEY=... OFD_INN=7707083893 docker compose up -d --build
-```
+Сетевые требования: центр должен достучаться до TCP-порта агента (18500) — напрямую, через проброс порта или
+VPN (NetBird/WireGuard). Агенту нужен исходящий HTTPS к `ofd.ru`. Входящих соединений к центру от агентов нет.
 
-Остановка: `docker compose down` (данные БД в volume `ofd_pgdata` сохраняются).
+## Как работает синхронизация
 
-## Быстрый старт без Docker (demo / mock)
+1. Агент каждые 15 минут (и по команде центра) запрашивает в ОФД список ККТ и чеки по каждой ККТ:
+   первая загрузка — 90 дней окнами по 30 дней, дальше — от последней успешной границы с перекрытием 1 час.
+   Новые чеки (по Id ОФД) получают в локальной БД монотонный номер `seq`.
+2. Центр каждые 5 минут по каждому включённому агенту: `GET /status` → `GET /kkts` → `GET /receipts?after=<курсор>`
+   страницами по 500, курсор сохраняется после каждой записанной страницы.
+3. Дедупликация в центре: по Id документа ОФД, затем по паре «номер ФН + номер ФД». Повторная выдача безопасна.
+4. Если БД агента пересоздана (сменился `instanceId`) или курсор центра больше `maxSeq` агента — курсор
+   сбрасывается в 0 и данные перечитываются (дубли отсекаются).
+5. Кнопка «Синхронизация» в клиенте: центр просит всех агентов собрать свежие данные (`POST /collect`),
+   ждёт окончания (до 3 минут) и забирает новые чеки.
 
-```bash
-# PostgreSQL
-sudo -u postgres createuser -P ofd   # пароль: ofd
-sudo -u postgres createdb -O ofd ofd_marking
+Контракт API агента: [`docs/agent-api.md`](docs/agent-api.md).
 
-# Сервер (mock-данные)
-chmod +x scripts/*.sh
-./scripts/run-server-mock.sh
-# API: http://127.0.0.1:18443/api/health
+## Безопасность
 
-# Клиент (другой терминал)
-./scripts/run-client.sh
-```
-
-Режим mock задаётся `OFD_MODE=mock` (по умолчанию). Реальный ключ не нужен.
-
-## Установка в прод (Windows Server)
-
-### 1. PostgreSQL
-
-1. Установите PostgreSQL 16+.
-2. Создайте БД `ofd_marking` и пользователя `ofd`.
-3. Проверьте доступ с сервера приложения.
-
-### 2. API KEY в личном кабинете ОФД
-
-1. Войдите в ЛК ОФД.ру.
-2. **Настройки → Управление передачей данных**.
-3. Создайте заявку на доступ к API; ключ появится во вкладке «Ключи доступа к API ОФД».
-4. Срок действия ключа — 1 год. В запросах передаётся как `AuthToken`.
-
-### 3. Сервис (WinSW)
-
-1. Соберите: `mvn -pl server -am -DskipTests package`.
-2. Скопируйте `server/target/ofd-marking-server-*.jar` и `server/src/main/resources/winsw/ofd-marking-server.xml` на сервер.
-3. Скачайте [WinSW](https://github.com/winsw/winsw/releases), переименуйте в `ofd-marking-server.exe`.
-4. Задайте env (или правьте XML): `OFD_MODE=live`, `OFD_API_KEY=...`, `OFD_INN=...` (10 или 12 цифр), `DB_*`.
-5. `ofd-marking-server.exe install` → `start`.
-
-Порт по умолчанию: **18443**.
-
-### 4. Клиент (MSI)
-
-Сборка MSI через `jpackage` на Windows — см. [`scripts/package-msi.md`](scripts/package-msi.md).  
-В настройках клиента укажите URL сервера (`http://<host>:18443`).
+- Ключ API ОФД хранится только в `agent.yml` на RDP клиента; агент его не отдаёт (в `/status` — только признак `apiKeyConfigured`).
+- Доступ к агенту: IP источника в `agent.allowed-ips` (берётся адрес TCP-соединения, заголовки `X-Forwarded-*` не учитываются) **и** заголовок `X-Agent-Token` (сравнение за постоянное время). Иначе 403/401, попытки пишутся в лог.
+- Токен в центре хранится в БД и наружу не отдаётся (в API — только `tokenHint` из 4 последних символов).
+- TLS — по желанию: `server.ssl.*` в `agent.yml` и галка «HTTPS» в карточке агента (сертификат агента должен быть доверенным для JVM центра).
 
 ## Правила маркировки (ФФД 1.2)
 
-Чек маркирован, если **хотя бы одна** позиция:
+Чек маркирован, если **хотя бы одна** позиция содержит код маркировки в теге **1163** (`ProductCode`)
+и/или имеет тег **1212** (`SubjectType`) = **31** или **33**.
+Товарные группы (бакалея, табак, никотинсодержащая, пиво, разливное пиво, вода, молочка, соки) — по правилам
+`nomenclature_rule` в БД центра.
 
-- содержит код маркировки в теге **1163** (`ProductCode` с непустым значением), **и/или**
-- имеет тег **1212** (`SubjectType`) = **31** или **33**.
+## API центра (для клиента)
 
-## Товарные группы
+- `GET /api/trade-points`, `/trade-points/worst`, `/groups`, `/matrix`, `/receipts`, `/receipts/{id}`
+- `GET|PUT /api/settings`, `GET /api/export/{trade-points|groups|matrix}`
+- `GET /api/sync/status`, `POST /api/sync/trigger?collect=true`
+- Агенты: `GET /api/agents`, `POST /api/admin/agents`, `PUT|DELETE /api/admin/agents/{id}`,
+  `POST /api/admin/agents/{id}/test|poll|reset-cursor`
 
-Бакалея, табак, никотинсодержащая, пиво, разливное пиво, вода, молочка, соки — rule-based справочник (`nomenclature_rule` в БД).
-
-## API клиента
-
-- `GET /api/trade-points`, `/trade-points/worst`, `/groups`, `/matrix`
-- `GET /api/receipts`, `/receipts/{id}`
-- `GET|PUT /api/settings`
-- `GET /api/sync/status`, `POST /api/sync/trigger`
-- `GET /api/export/{trade-points|groups|matrix}`
-
-## Документация
-
-- [`docs/requirements.md`](docs/requirements.md) — user stories и AC
-- [`docs/api-mapping.md`](docs/api-mapping.md) — mapping ОФД (допущения Q1–Q4 изолированы)
-- [`docs/roles/`](docs/roles/) — отчёты аналитика / backend / frontend / tester
-
-## Тесты и CI
+## Тесты
 
 ```bash
 mvn clean verify
 ```
 
-Testcontainers (PostgreSQL) + WireMock (ОФД) + e2e collection→metrics. CI: `.github/workflows/ci.yml`.
+- `agent`: WireMock-тест клиента ОФД (ретраи 429), белый список IP (CIDR, IPv6, подмена `X-Forwarded-For`),
+  проверка токена, сбор + повторный сбор без дублей, постраничная выдача по курсору.
+- `server`: настоящие mock-агенты внутри теста — регистрация, проверка связи (401/403), агрегация двух агентов,
+  статистика по ТТ и худшие ТТ, инкрементальность, сброс курсора и агент-дубль без дублей чеков,
+  выключение/удаление агентов; PostgreSQL 16 через Testcontainers (пропускается без Docker).
 
 ## Лимиты ОФД
 
-- `receipts-info`: не чаще **1 запроса / 2 с**, окно **≤ 30 суток**, глубина **90 суток**.
-- Основной метод: `/api/integration/v2/inn/{INN}/kkt/{RNM}/receipts-info`.
+`receipts-info`: не чаще 1 запроса / 2 с на агента, окно ≤ 30 суток, глубина 90 суток.
+Метод: `/api/integration/v2/inn/{ИНН}/kkt/{РНМ}/receipts-info?dateFrom&dateTo&AuthToken`.

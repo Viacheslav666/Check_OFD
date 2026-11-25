@@ -35,7 +35,7 @@ public class ScreenshotDemo extends Application {
             try {
                 Thread.sleep(3500);
                 String[] names = {
-                        "01-dashboard", "02-worst", "03-groups", "04-matrix", "05-receipts", "06-settings"
+                        "01-dashboard", "02-worst", "03-groups", "04-matrix", "05-receipts", "06-agents", "07-settings"
                 };
                 for (int i = 0; i < names.length; i++) {
                     final int idx = i;

@@ -26,23 +26,22 @@ Expand-Archive -Path $clientZip -DestinationPath (Join-Path $out "client") -Forc
 
 Copy-Item (Join-Path $PSScriptRoot "Start-OFD.bat") $out
 Copy-Item (Join-Path $PSScriptRoot "Stop-OFD.bat") $out
-Copy-Item (Join-Path $PSScriptRoot "ofd-env.example.bat") $out
+Copy-Item (Join-Path $PSScriptRoot "central-env.example.bat") $out
 Copy-Item (Join-Path $PSScriptRoot "Install-Desktop.ps1") $out -ErrorAction SilentlyContinue
 
 @"
-OFD Marking — desktop pack (Windows / RDP)
-==========================================
+OFD Marking — центральное приложение (Windows, без Docker)
+==========================================================
 Требования: JDK 21+ (Temurin) в PATH. Docker НЕ нужен.
 
 1. Распакуйте zip в папку, например C:\OFD-Marking
-2. Для боевого ОФД: скопируйте ofd-env.example.bat → ofd-env.bat и укажите ключ
-3. Запуск: Start-OFD.bat  (поднимает локальный сервер + окно клиента)
+2. Запуск: Start-OFD.bat  (поднимает центральный сервер на H2 + окно клиента)
+3. Во вкладке «Агенты» добавьте агентов (IP, порт, токен) — агенты ставятся на RDP клиентов
+   из пакета ofd-agent-windows.zip
 4. Стоп сервера: Stop-OFD.bat
 
 Данные/логи: %LOCALAPPDATA%\OFD-Marking\data
-
-Запросы к ofd.ru идут с ЭТОЙ машины — ставьте пакет на каждый RDP-ПК,
-с которого нужен свой внешний IP.
+Ключ ОФД в центре не нужен — он хранится на агентах.
 "@ | Set-Content -Encoding UTF8 (Join-Path $out "README.txt")
 
 $zip = Join-Path $Root "dist\ofd-marking-desktop-windows.zip"

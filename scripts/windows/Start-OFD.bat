@@ -11,20 +11,19 @@ if not defined JAVA_HOME (
 )
 
 set "OFD_HOME=%~dp0"
-if exist "%OFD_HOME%ofd-env.bat" call "%OFD_HOME%ofd-env.bat"
+if exist "%OFD_HOME%central-env.bat" call "%OFD_HOME%central-env.bat"
 
 set "OFD_DATA_DIR=%LOCALAPPDATA%\OFD-Marking\data"
 if not exist "%OFD_DATA_DIR%" mkdir "%OFD_DATA_DIR%"
 
-if not defined OFD_MODE set "OFD_MODE=mock"
 if not defined SERVER_PORT set "SERVER_PORT=18443"
 if not defined OFD_CLIENT_SERVER_URL set "OFD_CLIENT_SERVER_URL=http://127.0.0.1:%SERVER_PORT%"
 
 echo ============================================
-echo  OFD Marking — desktop ^(no Docker^)
+echo  OFD Marking — центральное приложение ^(без Docker^)
 echo  Data: %OFD_DATA_DIR%
 echo  API:  %OFD_CLIENT_SERVER_URL%
-echo  Mode: %OFD_MODE%
+echo  Агенты добавляются во вкладке «Агенты»
 echo ============================================
 
 REM Stop previous server if still running on the port
@@ -34,7 +33,7 @@ for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":%SERVER_PORT% " ^| findstr 
 )
 
 start "OFD-Marking-Server" /MIN cmd /c ^
-  "set OFD_DATA_DIR=%OFD_DATA_DIR%&& set OFD_MODE=%OFD_MODE%&& set OFD_API_KEY=%OFD_API_KEY%&& set OFD_INN=%OFD_INN%&& set SERVER_PORT=%SERVER_PORT%&& java -Xms256m -Xmx768m -jar ""%OFD_HOME%ofd-marking-server.jar"" --spring.profiles.active=desktop"
+  "set OFD_DATA_DIR=%OFD_DATA_DIR%&& set SERVER_PORT=%SERVER_PORT%&& java -Xms256m -Xmx768m -jar ""%OFD_HOME%ofd-marking-server.jar"" --spring.profiles.active=desktop"
 
 echo Waiting for API...
 set /a tries=0

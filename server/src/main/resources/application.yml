@@ -25,22 +25,19 @@ management:
       exposure:
         include: health,info
 
-ofd:
-  mode: ${OFD_MODE:mock} # mock | live
-  base-url: ${OFD_BASE_URL:https://ofd.ru}
-  api-key: ${OFD_API_KEY:}
-  inn: ${OFD_INN:7707083893}
-  assume-receipts-info-all: true
-  filter-time-field: DOC_DATE_TIME
-  rate-limit-ms: 2000
-  max-window-days: 30
-  max-depth-days: 90
-  max-retries: 5
-  retry-backoff-ms: 2000
-  scheduler:
-    enabled: false # синк только по кнопке / API
-    cron: "0 */15 * * * *"
-  sync-on-startup: false
+# Центральное приложение: ключа ОФД здесь нет — данные приходят от агентов на RDP.
+central:
+  poll-enabled: ${CENTRAL_POLL_ENABLED:true}
+  poll-cron: "${CENTRAL_POLL_CRON:0 */5 * * * *}"
+  poll-on-startup: ${CENTRAL_POLL_ON_STARTUP:true}
+  page-size: 500
+  parallelism: 6
+  connect-timeout-seconds: 10
+  read-timeout-seconds: 60
+  collect-wait-seconds: 180
+  offline-after-minutes: 15
+  # Демо/docker: "имя|хост|порт|токен;..." — добавить агентов при первом старте
+  bootstrap-agents: ${CENTRAL_BOOTSTRAP_AGENTS:}
 
 app:
   client-api-key: ${CLIENT_API_KEY:}

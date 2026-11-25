@@ -1,0 +1,58 @@
+# Конфигурация агента ОФД. Внешний файл agent.yml рядом с jar (или config/agent.yml)
+# переопределяет эти значения; переменные окружения — ещё приоритетнее.
+server:
+  port: ${AGENT_PORT:18500}
+  # TLS (необязательно): server.ssl.enabled=true, key-store=agent.p12, key-store-password=...
+
+spring:
+  application:
+    name: ofd-agent
+  main:
+    banner-mode: off
+  datasource:
+    url: jdbc:h2:file:${agent.data-dir}/agent;DB_CLOSE_ON_EXIT=FALSE
+    username: agent
+    password: agent
+    driver-class-name: org.h2.Driver
+    hikari:
+      maximum-pool-size: 4
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: false
+
+agent:
+  name: ${AGENT_NAME:ofd-agent}
+  # Токен центра (≥16 символов). Пусто — сгенерируется в ${agent.data-dir}/agent-token.txt
+  token: ${AGENT_TOKEN:}
+  # IP центрального приложения (через запятую, допускается CIDR: 10.10.50.0/24)
+  allowed-ips: ${AGENT_ALLOWED_IPS:127.0.0.1,::1}
+  data-dir: ${AGENT_DATA_DIR:./data}
+  retention-days: ${AGENT_RETENTION_DAYS:120}
+
+ofd:
+  mode: ${OFD_MODE:mock} # mock | live
+  base-url: ${OFD_BASE_URL:https://ofd.ru}
+  # Ключ API ОФД хранится ТОЛЬКО здесь, на агенте. В центральное приложение не передаётся.
+  api-key: ${OFD_API_KEY:}
+  # ИНН организаций через запятую
+  inn: ${OFD_INN:635001808204}
+  rate-limit-ms: 2000
+  max-window-days: 30
+  max-depth-days: 90
+  max-retries: 5
+  retry-backoff-ms: 2000
+  sync-on-startup: ${AGENT_COLLECT_ON_STARTUP:true}
+  scheduler:
+    enabled: ${AGENT_COLLECT_ENABLED:true}
+    cron: "${AGENT_COLLECT_CRON:0 */15 * * * *}"
+
+logging:
+  file:
+    name: ${agent.data-dir}/ofd-agent.log
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 14
+  level:
+    root: INFO
+    ru.ofd: INFO

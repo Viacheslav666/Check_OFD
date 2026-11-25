@@ -13,6 +13,8 @@ import ru.ofd.marking.domain.entity.Receipt;
 public interface ReceiptRepository extends JpaRepository<Receipt, Long> {
     Optional<Receipt> findByOfdRawId(String ofdRawId);
     boolean existsByOfdRawId(String ofdRawId);
+    boolean existsByFnNumberAndDocNumber(String fnNumber, Long docNumber);
+    long countByAgentId(Long agentId);
 
     @Query("""
         select r.tradePoint.id, count(r), sum(case when r.hasMarkedGoods then 1 else 0 end)

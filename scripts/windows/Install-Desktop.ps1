@@ -20,11 +20,11 @@ $zip = Join-Path $env:TEMP "ofd-marking-desktop-windows.zip"
 Write-Host "Downloading $($rel.tag_name)..."
 Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zip
 
-Get-ChildItem $InstallDir -Force | Where-Object { $_.Name -ne 'ofd-env.bat' } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+Get-ChildItem $InstallDir -Force | Where-Object { $_.Name -ne 'central-env.bat' } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 Expand-Archive -Path $zip -DestinationPath $InstallDir -Force
 
 Write-Host ""
 Write-Host "Installed: $InstallDir"
-Write-Host "  1) Optional live: copy ofd-env.example.bat to ofd-env.bat and set OFD_API_KEY"
+Write-Host "  1) Агентов на RDP клиентов добавьте во вкладке «Агенты» (ключ ОФД хранится на агентах)"
 Write-Host "  2) Run: $InstallDir\Start-OFD.bat"
 Write-Host "Need JDK 21+ on PATH. Data: $env:LOCALAPPDATA\OFD-Marking\data"

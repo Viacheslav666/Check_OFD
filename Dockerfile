@@ -2,10 +2,14 @@
 FROM maven:3.9.9-eclipse-temurin-21 AS build
 WORKDIR /src
 COPY pom.xml .
+COPY contract/pom.xml contract/pom.xml
+COPY agent/pom.xml agent/pom.xml
 COPY server/pom.xml server/pom.xml
 COPY client/pom.xml client/pom.xml
-# Prefetch deps (client module stays out of the runtime image)
+# Центральное приложение (сервер). Клиент JavaFX в образ не входит.
 RUN mvn -pl server -am -B -q dependency:go-offline -DskipTests || true
+COPY contract contract
+COPY agent agent
 COPY server server
 COPY client client
 RUN mvn -pl server -am -B -DskipTests package
@@ -20,6 +24,5 @@ COPY --from=build /src/server/target/ofd-marking-server-*.jar /app/app.jar
 USER ofd
 EXPOSE 18443
 ENV SERVER_PORT=18443 \
-    OFD_MODE=mock \
     JAVA_OPTS="-XX:MaxRAMPercentage=75"
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]

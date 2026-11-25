@@ -16,11 +16,6 @@ spring:
 server:
   port: ${SERVER_PORT:18443}
 
-ofd:
-  mode: ${OFD_MODE:mock}
-  sync-on-startup: false
-  scheduler:
-    enabled: false
 
 logging:
   file:

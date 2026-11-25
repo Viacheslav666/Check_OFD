@@ -24,6 +24,16 @@ public class Kkt {
     private TradePoint tradePoint;
     @Column(name = "last_seen_at", nullable = false)
     private Instant lastSeenAt = Instant.now();
+    /** Агент, через которого пришла ККТ (null — агент удалён). */
+    @Column(name = "agent_id")
+    private Long agentId;
+    @Column(length = 12)
+    private String inn;
+
+    public Long getAgentId() { return agentId; }
+    public void setAgentId(Long agentId) { this.agentId = agentId; }
+    public String getInn() { return inn; }
+    public void setInn(String inn) { this.inn = inn; }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

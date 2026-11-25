@@ -36,9 +36,12 @@ public class MainView extends BorderPane {
     private final TextField periodField = new TextField();
     private final Label syncLabel = new Label();
 
+    private final AgentsPane agentsPane;
+
     public MainView(ApiClient api, ClientConfig config) {
         this.api = api;
         this.config = config;
+        this.agentsPane = new AgentsPane(api, statusLabel);
         setTop(buildToolbar());
         setCenter(tabs);
         setBottom(statusBar());
@@ -48,6 +51,7 @@ public class MainView extends BorderPane {
                 tab("Группы", groupsPane()),
                 tab("Матрица ТТ×группа", matrixPane()),
                 tab("Чеки", receiptsPane()),
+                tab("Агенты", agentsPane.build()),
                 tab("Настройки", settingsPane())
         );
         serverUrlField.setText(config.getServerUrl());
@@ -58,14 +62,15 @@ public class MainView extends BorderPane {
     private HBox buildToolbar() {
         Button refresh = new Button("Обновить");
         refresh.setOnAction(e -> refreshAll());
-        Button sync = new Button("Синхронизация ОФД");
+        Button sync = new Button("Синхронизация");
+        sync.setTooltip(new Tooltip("Попросить агентов собрать свежие чеки из ОФД и загрузить их в центр"));
         sync.setOnAction(e -> {
             sync.setDisable(true);
             runAsync(() -> {
                 try {
                     Platform.runLater(() -> statusLabel.setText("Синхронизация запущена…"));
                     api.triggerSync();
-                    for (int i = 0; i < 120; i++) {
+                    for (int i = 0; i < 600; i++) {
                         Thread.sleep(1000);
                         JsonNode st = api.syncStatus();
                         boolean running = st.path("running").asBoolean(false);
@@ -79,6 +84,7 @@ public class MainView extends BorderPane {
                         }
                     }
                     Platform.runLater(this::refreshAll);
+                    agentsPane.refresh();
                 } finally {
                     Platform.runLater(() -> sync.setDisable(false));
                 }
@@ -192,7 +198,8 @@ public class MainView extends BorderPane {
             });
         });
         VBox box = new VBox(16, title("Настройки"), grid, save,
-                new Label("API KEY ОФД задаётся только на сервере (OFD_API_KEY), не в клиенте."));
+                new Label("Ключи API ОФД хранятся только на агентах (agent.yml на RDP клиента), не в центре и не в клиенте.\n"
+                        + "Агентов добавляют и проверяют во вкладке «Агенты»."));
         box.setPadding(new Insets(16));
         return new BorderPane(box);
     }
@@ -219,6 +226,7 @@ public class MainView extends BorderPane {
                     statusLabel.setText("Данные обновлены");
                 });
                 loadReceipts();
+                agentsPane.refresh();
             } catch (Exception ex) {
                 Platform.runLater(() -> statusLabel.setText("Ошибка: " + ex.getMessage()));
             }
@@ -265,7 +273,7 @@ public class MainView extends BorderPane {
         });
     }
 
-    private static Map<String, Object> apiMapper(JsonNode n) {
+    static Map<String, Object> apiMapper(JsonNode n) {
         return new com.fasterxml.jackson.databind.ObjectMapper()
                 .convertValue(n, new com.fasterxml.jackson.core.type.TypeReference<>() {});
     }
@@ -279,7 +287,7 @@ public class MainView extends BorderPane {
         }
     }
 
-    private static void runAsync(ThrowingRunnable r) {
+    static void runAsync(ThrowingRunnable r) {
         Thread t = new Thread(() -> {
             try {
                 r.run();
@@ -295,8 +303,12 @@ public class MainView extends BorderPane {
         t.start();
     }
 
-    private interface ThrowingRunnable {
+    interface ThrowingRunnable {
         void run() throws Exception;
+    }
+
+    interface ThrowingRunnableWithId {
+        void run(long id) throws Exception;
     }
 
     private static Tab tab(String title, javafx.scene.Node content) {
@@ -305,7 +317,7 @@ public class MainView extends BorderPane {
         return t;
     }
 
-    private static Label title(String text) {
+    static Label title(String text) {
         Label l = new Label(text);
         l.getStyleClass().add("screen-title");
         return l;
@@ -321,8 +333,7 @@ public class MainView extends BorderPane {
         return p;
     }
 
-    @SafeVarargs
-    private static void setupColumns(TableView<Map<String, Object>> table, String... specs) {
+    static void setupColumns(TableView<Map<String, Object>> table, String... specs) {
         table.getColumns().clear();
         for (String spec : specs) {
             String[] p = spec.split(":", 2);
@@ -340,7 +351,7 @@ public class MainView extends BorderPane {
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
     }
 
-    private static TableView<Map<String, Object>> mapTable() {
+    static TableView<Map<String, Object>> mapTable() {
         TableView<Map<String, Object>> t = new TableView<>();
         t.setPlaceholder(new Label("Нет данных"));
         return t;

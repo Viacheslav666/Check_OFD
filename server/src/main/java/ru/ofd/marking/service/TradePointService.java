@@ -21,8 +21,13 @@ public class TradePointService {
         this.kktRepository = kktRepository;
     }
 
+    @Transactional(readOnly = true)
+    public java.util.Optional<Kkt> findKkt(String regNumber) {
+        return kktRepository.findByRegNumber(regNumber);
+    }
+
     @Transactional
-    public Kkt upsertKkt(OfdKktDto dto) {
+    public Kkt upsertKkt(OfdKktDto dto, Long agentId, String inn) {
         String address = dto.getFiscalAddress() == null ? "" : dto.getFiscalAddress();
         String place = dto.getFiscalPlace() == null ? "" : dto.getFiscalPlace();
         String hash = TradePointKey.hash(address, place);
@@ -44,6 +49,10 @@ public class TradePointService {
         kkt.setLkPath(dto.getPath());
         kkt.setTradePoint(tp);
         kkt.setLastSeenAt(Instant.now());
+        kkt.setAgentId(agentId);
+        if (inn != null) {
+            kkt.setInn(inn);
+        }
         return kktRepository.save(kkt);
     }
 }

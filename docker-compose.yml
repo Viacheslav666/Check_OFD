@@ -1,3 +1,6 @@
+# Центральное приложение + PostgreSQL + 2 демо-агента (mock, без ключа ОФД).
+# Запуск: docker compose up -d --build     Проверка: curl http://127.0.0.1:18443/api/agents
+# В бою агенты ставятся на RDP клиентов (см. README), а здесь остаются только db + server.
 services:
   db:
     image: postgres:16-alpine
@@ -5,7 +8,7 @@ services:
     environment:
       POSTGRES_DB: ofd_marking
       POSTGRES_USER: ofd
-      POSTGRES_PASSWORD: ofd
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ofd}
     volumes:
       - ofd_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -23,17 +26,17 @@ services:
       db:
         condition: service_healthy
     ports:
-      # Host:container. Keep 18443 if :8080 is already used by a monitor.
+      # Хост:контейнер. 18443 — если :8080 уже занят монитором.
       - "${OFD_HOST_PORT:-18443}:18443"
     environment:
       SERVER_PORT: "18443"
       DB_URL: jdbc:postgresql://db:5432/ofd_marking
       DB_USER: ofd
-      DB_PASSWORD: ofd
-      OFD_MODE: ${OFD_MODE:-mock}
-      OFD_API_KEY: ${OFD_API_KEY:-}
-      OFD_INN: ${OFD_INN:-7707083893}
-      OFD_BASE_URL: ${OFD_BASE_URL:-https://ofd.ru}
+      DB_PASSWORD: ${DB_PASSWORD:-ofd}
+      CLIENT_API_KEY: ${CLIENT_API_KEY:-}
+      CENTRAL_POLL_CRON: ${CENTRAL_POLL_CRON:-0 */5 * * * *}
+      # Демо: агенты регистрируются автоматически. В бою оставьте пустым и добавляйте агентов в ЛК (вкладка «Агенты»).
+      CENTRAL_BOOTSTRAP_AGENTS: ${CENTRAL_BOOTSTRAP_AGENTS-demo-samara|agent1|18500|demo-token-agent1-0123456789;demo-tolyatti|agent2|18500|demo-token-agent2-0123456789}
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:18443/api/health || exit 1"]
       interval: 10s
@@ -42,5 +45,40 @@ services:
       start_period: 40s
     restart: unless-stopped
 
+  agent1:
+    image: ${OFD_AGENT_IMAGE:-ghcr.io/viacheslav666/check_ofd-agent:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    container_name: ofd-agent-1
+    environment:
+      AGENT_NAME: demo-samara
+      AGENT_TOKEN: demo-token-agent1-0123456789
+      # Внутри docker-сети центр приходит с адреса 172.16.0.0/12
+      AGENT_ALLOWED_IPS: 172.16.0.0/12,127.0.0.1
+      OFD_MODE: mock
+      OFD_INN: "635001808204"
+    volumes:
+      - agent1_data:/data
+    restart: unless-stopped
+
+  agent2:
+    image: ${OFD_AGENT_IMAGE:-ghcr.io/viacheslav666/check_ofd-agent:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    container_name: ofd-agent-2
+    environment:
+      AGENT_NAME: demo-tolyatti
+      AGENT_TOKEN: demo-token-agent2-0123456789
+      AGENT_ALLOWED_IPS: 172.16.0.0/12,127.0.0.1
+      OFD_MODE: mock
+      OFD_INN: "632100000017"
+    volumes:
+      - agent2_data:/data
+    restart: unless-stopped
+
 volumes:
   ofd_pgdata:
+  agent1_data:
+  agent2_data:

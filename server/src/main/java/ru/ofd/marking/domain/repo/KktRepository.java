@@ -4,4 +4,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import ru.ofd.marking.domain.entity.Kkt;
 public interface KktRepository extends JpaRepository<Kkt, Long> {
     Optional<Kkt> findByRegNumber(String regNumber);
+    long countByAgentId(Long agentId);
 }

@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import ru.ofd.marking.export.ExcelExportService;
 import ru.ofd.marking.service.MetricsService;
 import ru.ofd.marking.service.SettingsService;
-import ru.ofd.marking.sync.CollectionService;
+import ru.ofd.marking.agents.AgentSyncService;
 import ru.ofd.marking.web.dto.*;
 
 @RestController
@@ -24,12 +24,12 @@ public class AnalyticsController {
 
     private final MetricsService metricsService;
     private final SettingsService settingsService;
-    private final CollectionService collectionService;
+    private final AgentSyncService collectionService;
     private final ExcelExportService excelExportService;
 
     public AnalyticsController(MetricsService metricsService,
                                SettingsService settingsService,
-                               CollectionService collectionService,
+                               AgentSyncService collectionService,
                                ExcelExportService excelExportService) {
         this.metricsService = metricsService;
         this.settingsService = settingsService;
@@ -106,14 +106,18 @@ public class AnalyticsController {
     }
 
     @GetMapping("/sync/status")
-    public CollectionService.SyncStatus syncStatus() {
+    public AgentSyncService.SyncStatus syncStatus() {
         return collectionService.status();
     }
 
+    /** Кнопка «Синхронизация»: попросить агентов собрать данные из ОФД и выгрузить их в центр. */
     @PostMapping("/sync/trigger")
-    public CollectionService.SyncStatus syncTrigger() {
-        Thread t = new Thread(collectionService::runSync, "ofd-manual-sync");
-        t.start();
+    public AgentSyncService.SyncStatus syncTrigger(@RequestParam(defaultValue = "true") boolean collect) {
+        if (!collectionService.isRunning()) {
+            Thread t = new Thread(() -> collectionService.runSync(collect), "agents-manual-sync");
+            t.setDaemon(true);
+            t.start();
+        }
         return collectionService.status();
     }
 

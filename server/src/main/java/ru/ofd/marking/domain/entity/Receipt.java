@@ -47,10 +47,14 @@ public class Receipt {
     private boolean hasMarkedGoods;
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
+    @Column(name = "agent_id")
+    private Long agentId;
     @OneToMany(mappedBy = "receipt", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("lineNo ASC")
     private List<ReceiptItem> items = new ArrayList<>();
 
+    public Long getAgentId() { return agentId; }
+    public void setAgentId(Long agentId) { this.agentId = agentId; }
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getOfdRawId() { return ofdRawId; }
