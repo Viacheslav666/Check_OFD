@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ofd-marking-db
+    environment:
+      POSTGRES_DB: ofd_marking
+      POSTGRES_USER: ofd
+      POSTGRES_PASSWORD: ofd
+    volumes:
+      - ofd_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ofd -d ofd_marking"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  server:
+    build: .
+    image: ofd-marking-server:1.0.0
+    container_name: ofd-marking-server
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      # Хост:контейнер. На 8080 монитор — оставьте 18443.
+      - "${OFD_HOST_PORT:-18443}:18443"
+    environment:
+      SERVER_PORT: "18443"
+      DB_URL: jdbc:postgresql://db:5432/ofd_marking
+      DB_USER: ofd
+      DB_PASSWORD: ofd
+      OFD_MODE: ${OFD_MODE:-mock}
+      OFD_API_KEY: ${OFD_API_KEY:-}
+      OFD_INN: ${OFD_INN:-7707083893}
+      OFD_BASE_URL: ${OFD_BASE_URL:-https://ofd.ru}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:18443/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: unless-stopped
+
+volumes:
+  ofd_pgdata:

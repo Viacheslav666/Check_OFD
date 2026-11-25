@@ -10,7 +10,47 @@
 | `client/` | JavaFX-клиент (дашборд, рейтинг, группы, матрица, чеки, Excel) |
 | `docs/` | ТЗ→requirements, API mapping, отчёты ролей |
 
-## Быстрый старт (demo / mock, без API KEY)
+## Быстрый старт в Docker (рекомендуется, если Docker уже есть)
+
+На машине с IP `10.10.50.2` или `192.168.31.196`:
+
+```bash
+git clone https://github.com/Viacheslav666/Check_OFD.git
+cd Check_OFD
+
+# mock: PostgreSQL + API в контейнерах
+docker compose up -d --build
+
+# проверка
+curl -s http://127.0.0.1:18443/api/health
+# с другого ПК:
+# curl -s http://10.10.50.2:18443/api/health
+# curl -s http://192.168.31.196:18443/api/health
+```
+
+Клиент JavaFX — на ПК (не в Docker):
+
+```bash
+OFD_CLIENT_SERVER_URL=http://10.10.50.2:18443 ./scripts/run-client.sh
+# или
+OFD_CLIENT_SERVER_URL=http://192.168.31.196:18443 ./scripts/run-client.sh
+```
+
+Порт на хосте (если 18443 занят; **8080 не трогайте**, если там монитор):
+
+```bash
+OFD_HOST_PORT=18444 docker compose up -d --build
+```
+
+Live ОФД:
+
+```bash
+OFD_MODE=live OFD_API_KEY=... OFD_INN=7707083893 docker compose up -d --build
+```
+
+Остановка: `docker compose down` (данные БД в volume `ofd_pgdata` сохраняются).
+
+## Быстрый старт без Docker (demo / mock)
 
 ```bash
 # PostgreSQL
