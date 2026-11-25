@@ -1,111 +1,151 @@
-<#
+﻿<#
 .SYNOPSIS
-  Установка агента ОФД на RDP клиента как службы Windows (WinSW).
+  Установка агента ОФД на RDP клиента как службы Windows (без Docker).
 
 .DESCRIPTION
-  - Требуется Java 21+ (Eclipse Temurin JRE) в PATH.
-  - Копирует ofd-agent.jar, создаёт agent.yml (если его ещё нет), скачивает WinSW,
-    регистрирует и запускает службу «ofd-agent».
-  - Открывает входящий порт агента в брандмауэре ТОЛЬКО для IP центрального приложения.
+  Запускается из распакованного архива ofd-agent-windows.zip (PowerShell от имени администратора).
+  - Java ставить не нужно: в архиве есть папка jre (Java 21, Eclipse Temurin / jlink).
+  - Копирует агента в C:\OFD-Agent, создаёт agent.yml (ключ API ОФД, ИНН, токен, белый список IP),
+    регистрирует и запускает службу Windows «ofd-agent» (WinSW, автозапуск, перезапуск при сбое).
+  - Открывает входящий TCP-порт агента (18500) в брандмауэре ТОЛЬКО для адресов из белого списка.
   - Ключ API ОФД остаётся в agent.yml на этой машине и никуда не передаётся.
+  Проверено для Windows Server 2019 Standard x64 (Windows PowerShell 5.1).
 
 .EXAMPLE
-  .\Install-Agent.ps1 -CentralIp 10.10.50.2 -ApiKey "<ключ из ЛК ОФД>" -Inn 635001808204 -Name "РДП Самара"
+  .\Install-Agent.ps1 -Inn 635001808204 -Name "РДП Самара"
+  (ключ API ОФД будет запрошен скрытым вводом; белый список по умолчанию — 192.168.31.196)
+
+.EXAMPLE
+  .\Install-Agent.ps1 -Inn 635001808204 -Name "РДП Самара" -AllowedIps 192.168.31.196,10.10.50.2 -Port 18500
 #>
+[CmdletBinding()]
 param(
-  [Parameter(Mandatory = $true)][string]$CentralIp,
-  [string]$ApiKey = "",
-  [string]$Inn = "635001808204",
+  [string]$Inn = "",
   [string]$Name = $env:COMPUTERNAME,
+  [Alias("CentralIp")][string[]]$AllowedIps = @("192.168.31.196"),
   [int]$Port = 18500,
+  [string]$ApiKey = "",
+  [string]$Token = "",
   [ValidateSet("live", "mock")][string]$Mode = "live",
   [string]$InstallDir = "C:\OFD-Agent",
-  [string]$WinSwUrl = "https://github.com/winsw/winsw/releases/download/v2.12.0/WinSW-x64.exe"
+  [string]$JavaHome = "",
+  [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
+. (Join-Path $here "AgentCommon.ps1")
 
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
-    [Security.Principal.WindowsBuiltInRole]::Administrator)) {
-  throw "Запустите PowerShell от имени администратора."
-}
-java -version 2>$null
-if ($LASTEXITCODE -ne 0) { throw "Нужна Java 21+ (Eclipse Temurin JRE) в PATH." }
-if ($Mode -eq "live" -and [string]::IsNullOrWhiteSpace($ApiKey)) {
-  throw "Для режима live укажите -ApiKey (ключ API из ЛК ОФД: Настройки → Управление передачей данных)."
-}
+Assert-Admin
+Set-Tls12
 
-New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
-New-Item -ItemType Directory -Force -Path (Join-Path $InstallDir "data") | Out-Null
-
-$jar = Get-ChildItem -Path $here -Filter "ofd-agent*.jar" | Select-Object -First 1
-if (-not $jar) { throw "ofd-agent.jar не найден рядом со скриптом." }
-Copy-Item $jar.FullName (Join-Path $InstallDir "ofd-agent.jar") -Force
-Copy-Item (Join-Path $here "ofd-agent.xml") (Join-Path $InstallDir "ofd-agent.xml") -Force
-
-# Токен: 32 случайных байта в hex
-$bytes = New-Object byte[] 32
-[Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
-$token = ($bytes | ForEach-Object { $_.ToString("x2") }) -join ""
+# --- проверки параметров ---
+$AllowedIps = Split-IpList $AllowedIps
+foreach ($ip in $AllowedIps) { Assert-IpOrCidr $ip }
+if ($AllowedIps.Count -eq 0) { throw "Белый список пуст: укажите -AllowedIps (IP центрального приложения)." }
 
 $cfg = Join-Path $InstallDir "agent.yml"
-if (Test-Path $cfg) {
-  Write-Host "agent.yml уже существует — не перезаписываю (токен и ключ остаются прежними)."
-  $token = $null
+$keepCfg = (Test-Path $cfg) -and -not $Force
+if (-not $keepCfg) {
+  if ($Mode -eq "live") {
+    if ([string]::IsNullOrWhiteSpace($Inn)) { $Inn = Read-Host "ИНН организации (10 или 12 цифр; несколько — через запятую)" }
+    foreach ($i in ($Inn -split "[,;\s]+" | Where-Object { $_ })) {
+      if ($i -notmatch '^\d{10}(\d{2})?$') { throw "Неверный ИНН: '$i' (нужно 10 или 12 цифр)." }
+    }
+    if ([string]::IsNullOrWhiteSpace($ApiKey)) {
+      $sec = Read-Host "Ключ API ОФД (ЛК ОФД: Настройки → Управление передачей данных)" -AsSecureString
+      $ApiKey = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec))
+    }
+    if ([string]::IsNullOrWhiteSpace($ApiKey)) { throw "Для режима live нужен ключ API ОФД." }
+  }
+  if ([string]::IsNullOrWhiteSpace($Token)) { $Token = New-AgentToken }
+  if ($Token.Length -lt 16) { throw "Токен должен быть не короче 16 символов." }
+}
+
+# --- файлы ---
+$jar = Get-ChildItem -Path $here -Filter "ofd-agent*.jar" | Select-Object -First 1
+if (-not $jar) { throw "ofd-agent.jar не найден рядом со скриптом." }
+$winsw = Join-Path $here "WinSW-x64.exe"
+if (-not (Test-Path $winsw)) { throw "WinSW-x64.exe не найден рядом со скриптом (он входит в архив ofd-agent-windows.zip)." }
+$bundledJre = Join-Path $here "jre"
+if (-not $JavaHome -and -not (Test-Path (Join-Path $bundledJre "bin\java.exe"))) {
+  throw "В архиве нет папки jre. Скачайте полный архив ofd-agent-windows.zip или укажите -JavaHome <папка Java 21>."
+}
+
+New-Item -ItemType Directory -Force -Path $InstallDir, (Join-Path $InstallDir "data") | Out-Null
+$exe = Join-Path $InstallDir "ofd-agent.exe"
+Stop-AgentService $exe
+
+Copy-Item $jar.FullName (Join-Path $InstallDir "ofd-agent.jar") -Force
+Copy-Item $winsw $exe -Force
+if (-not $JavaHome) {
+  $dstJre = Join-Path $InstallDir "jre"
+  if (Test-Path $dstJre) { Remove-Item -Recurse -Force $dstJre }
+  Copy-Item $bundledJre $dstJre -Recurse -Force
+}
+foreach ($s in "AgentCommon.ps1", "Set-AgentAllowedIps.ps1", "Update-Agent.ps1", "Uninstall-Agent.ps1") {
+  if (Test-Path (Join-Path $here $s)) { Copy-Item (Join-Path $here $s) $InstallDir -Force }
+}
+$xml = Get-Content -Raw -Encoding UTF8 (Join-Path $here "ofd-agent.xml")
+if ($JavaHome) { $xml = $xml.Replace('%BASE%\jre\bin\java.exe', (Join-Path $JavaHome "bin\java.exe")) }
+Write-Utf8NoBom (Join-Path $InstallDir "ofd-agent.xml") $xml
+
+# --- agent.yml ---
+if ($keepCfg) {
+  Write-Host "agent.yml уже есть — не перезаписываю (ключ ОФД и токен прежние). Для перезаписи: -Force."
+  Write-Host "Белый список обновляю на: $($AllowedIps -join ', ')"
+  Set-AllowedIpsInYaml $cfg $AllowedIps
+  $Port = Get-AgentPort $cfg $Port
+  $Token = $null
 } else {
-@"
+  $yml = @"
+# Конфигурация агента ОФД. Файл содержит секреты: доступ только у Администраторов и SYSTEM.
 server:
   port: $Port
 agent:
-  name: "$Name"
-  token: "$token"
-  allowed-ips: "$CentralIp"
+  name: $(Quote-Yaml $Name)
+  # Общий секрет с центральным приложением (тот же — в карточке агента в ЛК центра)
+  token: $(Quote-Yaml $Token)
+  # IP центрального приложения (через запятую, можно CIDR). Изменения применяются без перезапуска
+  # (~10 с). Чтобы заодно обновить брандмауэр: .\Set-AgentAllowedIps.ps1 -AllowedIps <IP>
+  allowed-ips: $(Quote-Yaml ($AllowedIps -join ","))
+  allowlist-reload-seconds: 10
   data-dir: "./data"
+  retention-days: 120
 ofd:
   mode: $Mode
-  api-key: "$ApiKey"
-  inn: "$Inn"
+  # Ключ API ОФД этого клиента. Хранится только здесь.
+  api-key: $(Quote-Yaml $ApiKey)
+  inn: $(Quote-Yaml $Inn)
   sync-on-startup: true
   scheduler:
     enabled: true
     cron: "0 */15 * * * *"
-"@ | Set-Content -Encoding UTF8 $cfg
+"@
+  Write-Utf8NoBom $cfg $yml
 }
+$ApiKey = $null
 
 # Права на папку: только Администраторы и SYSTEM (в agent.yml секреты)
-icacls $InstallDir /inheritance:r /grant:r "Administrators:(OI)(CI)F" "SYSTEM:(OI)(CI)F" | Out-Null
+& icacls $InstallDir /inheritance:r /grant:r "*S-1-5-32-544:(OI)(CI)F" "*S-1-5-18:(OI)(CI)F" | Out-Null
 
-$exe = Join-Path $InstallDir "ofd-agent.exe"
-if (-not (Test-Path $exe)) {
-  $local = Join-Path $here "WinSW-x64.exe"
-  if (Test-Path $local) { Copy-Item $local $exe } else { Invoke-WebRequest -Uri $WinSwUrl -OutFile $exe }
-}
+# --- служба ---
+& $exe install | Out-Host
+& $exe start | Out-Host
 
-& $exe stop 2>$null | Out-Null
-& $exe uninstall 2>$null | Out-Null
-& $exe install
-& $exe start
+# --- брандмауэр ---
+Set-AgentFirewall $Port $AllowedIps
 
-$ruleName = "OFD Agent $Port"
-Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue | Remove-NetFirewallRule
-New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Protocol TCP -LocalPort $Port `
-  -RemoteAddress $CentralIp -Action Allow | Out-Null
+$ok = Wait-AgentListening $Port 90
+if ($ok) { Write-Host "Служба ofd-agent запущена, порт $Port слушается." -ForegroundColor Green }
+else { Write-Warning "Агент пока не слушает порт $Port. Логи: $InstallDir\data\ofd-agent.log и $InstallDir\ofd-agent.out.log" }
 
-Start-Sleep -Seconds 8
-try {
-  $h = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/agent/v1/health" -TimeoutSec 5
-  Write-Host "Агент запущен: $($h.status), версия $($h.version)"
-} catch {
-  Write-Warning "Агент ещё не ответил. Лог: $InstallDir\data\ofd-agent.log и $InstallDir\ofd-agent.out.log"
-}
-
-$ip = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike "127.*" -and $_.PrefixOrigin -ne "WellKnown" } |
-  Select-Object -First 1).IPAddress
+$ips = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike "127.*" -and $_.IPAddress -notlike "169.254.*" }).IPAddress -join ", "
 Write-Host ""
 Write-Host "=== Внесите в ЛК центрального приложения (вкладка «Агенты») ==="
 Write-Host "Имя:   $Name"
-Write-Host "IP:    $ip  (или адрес этой машины в VPN/NetBird)"
+Write-Host "IP:    $ips"
 Write-Host "Порт:  $Port"
-if ($token) { Write-Host "Токен: $token" } else { Write-Host "Токен: см. agent.token в $cfg" }
-Write-Host "Файл конфигурации: $cfg"
+if ($Token) { Write-Host "Токен: $Token" } else { Write-Host "Токен: прежний (agent.token в $cfg)" }
+Write-Host "Белый список IP: $($AllowedIps -join ', ')"
+Write-Host "Сменить IP центра: $InstallDir\Set-AgentAllowedIps.ps1 -AllowedIps <IP>"

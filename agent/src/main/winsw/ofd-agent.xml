@@ -1,13 +1,14 @@
 <!--
   WinSW: служба Windows для агента ОФД.
-  Рядом должны лежать: ofd-agent.exe (переименованный WinSW-x64.exe), ofd-agent.jar, agent.yml.
+  Рядом должны лежать: ofd-agent.exe (переименованный WinSW-x64.exe), ofd-agent.jar, agent.yml, jre\ (Java 21).
+  Ставится скриптом Install-Agent.ps1; Docker и установленная в системе Java не нужны.
   Установка:  ofd-agent.exe install   Запуск: ofd-agent.exe start   Статус: ofd-agent.exe status
 -->
 <service>
   <id>ofd-agent</id>
   <name>OFD Agent (сбор чеков ОФД.ру)</name>
   <description>Агент: собирает чеки из ОФД.ру по ключу API этого клиента и отдаёт их центральному приложению</description>
-  <executable>java</executable>
+  <executable>%BASE%\jre\bin\java.exe</executable>
   <arguments>-Xms64m -Xmx384m -XX:+UseSerialGC -Dfile.encoding=UTF-8 -jar "%BASE%\ofd-agent.jar"</arguments>
   <workingdirectory>%BASE%</workingdirectory>
   <startmode>Automatic</startmode>

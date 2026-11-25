@@ -8,13 +8,13 @@ import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import ru.ofd.agent.security.AgentSecurityFilter;
-import ru.ofd.agent.security.IpAllowlist;
+import ru.ofd.agent.security.AllowlistHolder;
 import ru.ofd.marking.contract.AgentApi;
 
 class AgentSecurityFilterTest {
 
     private final AgentSecurityFilter filter =
-            new AgentSecurityFilter(new IpAllowlist(List.of("10.10.50.2")), "secret-token-0123456789");
+            new AgentSecurityFilter(new AllowlistHolder(List.of("10.10.50.2")), "secret-token-0123456789");
 
     private MockHttpServletResponse call(String ip, String path, String token) throws Exception {
         MockHttpServletRequest req = new MockHttpServletRequest("GET", path);

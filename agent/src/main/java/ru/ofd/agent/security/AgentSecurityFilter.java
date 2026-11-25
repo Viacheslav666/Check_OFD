@@ -19,19 +19,20 @@ import ru.ofd.marking.contract.AgentApi;
 public class AgentSecurityFilter extends OncePerRequestFilter {
     private static final Logger log = LoggerFactory.getLogger(AgentSecurityFilter.class);
 
-    private final IpAllowlist allowlist;
+    private final AllowlistHolder allowlist;
     private final byte[] token;
 
-    public AgentSecurityFilter(IpAllowlist allowlist, String token) {
+    public AgentSecurityFilter(AllowlistHolder allowlist, String token) {
         this.allowlist = allowlist;
         this.token = token.getBytes(StandardCharsets.UTF_8);
     }
+
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String ip = request.getRemoteAddr();
-        if (!allowlist.allows(ip)) {
+        if (!allowlist.get().allows(ip)) {
             log.warn("Отклонён запрос {} {} с IP {}: адреса нет в белом списке agent.allowed-ips",
                     request.getMethod(), request.getRequestURI(), ip);
             deny(response, HttpServletResponse.SC_FORBIDDEN, "IP " + ip + " is not allowed");

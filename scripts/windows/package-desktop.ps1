@@ -1,4 +1,4 @@
-# Builds ofd-marking-desktop-windows.zip — server JAR + JavaFX client + Start/Stop bat (no Docker).
+﻿# Builds ofd-marking-desktop-windows.zip — server JAR + JavaFX client + Start/Stop bat (no Docker).
 $ErrorActionPreference = "Stop"
 $Root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 Set-Location $Root

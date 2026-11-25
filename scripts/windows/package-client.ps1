@@ -1,4 +1,4 @@
-# Builds a portable Windows client zip (JavaFX module-path + app jar + deps).
+﻿# Builds a portable Windows client zip (JavaFX module-path + app jar + deps).
 $ErrorActionPreference = "Stop"
 $Root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 Set-Location $Root

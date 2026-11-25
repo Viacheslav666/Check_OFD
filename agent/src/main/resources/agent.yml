@@ -26,6 +26,10 @@ agent:
   token: ${AGENT_TOKEN:}
   # IP центрального приложения (через запятую, допускается CIDR: 10.10.50.0/24)
   allowed-ips: ${AGENT_ALLOWED_IPS:127.0.0.1,::1}
+  # Как часто проверять внешний agent.yml и применять новый allowed-ips без перезапуска (0 — выключено)
+  allowlist-reload-seconds: ${AGENT_ALLOWLIST_RELOAD_SECONDS:10}
+  # Явный путь к agent.yml для горячей перезагрузки; пусто — ./config/agent.yml или ./agent.yml
+  config-file: ${AGENT_CONFIG_FILE:}
   data-dir: ${AGENT_DATA_DIR:./data}
   retention-days: ${AGENT_RETENTION_DAYS:120}
 

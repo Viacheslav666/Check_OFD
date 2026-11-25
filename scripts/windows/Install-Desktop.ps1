@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Download latest desktop zip from GitHub Releases and unpack (no Docker).
 #>

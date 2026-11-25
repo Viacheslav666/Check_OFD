@@ -86,8 +86,22 @@ public final class IpAllowlist {
         if (a.startsWith("[") && a.endsWith("]")) a = a.substring(1, a.length() - 1);
         int pct = a.indexOf('%');
         if (pct > 0) a = a.substring(0, pct);
-        boolean literal = a.matches("^[0-9.]+$") || a.contains(":");
-        if (!literal) throw new IllegalArgumentException("Ожидался IP-адрес, а не имя хоста: " + addr);
+        if (a.matches("^[0-9.]+$")) {
+            // Строгий разбор IPv4 (без DNS): ровно 4 октета 0..255
+            String[] parts = a.split("\\.", -1);
+            if (parts.length != 4) throw new IllegalArgumentException("Неверный IP-адрес: " + addr);
+            byte[] b = new byte[4];
+            for (int i = 0; i < 4; i++) {
+                if (parts[i].isEmpty() || parts[i].length() > 3) throw new IllegalArgumentException("Неверный IP-адрес: " + addr);
+                int v = Integer.parseInt(parts[i]);
+                if (v > 255) throw new IllegalArgumentException("Неверный IP-адрес: " + addr);
+                b[i] = (byte) v;
+            }
+            return b;
+        }
+        if (!a.contains(":") || !a.matches("^[0-9a-fA-F:.]+$")) {
+            throw new IllegalArgumentException("Ожидался IP-адрес, а не имя хоста: " + addr);
+        }
         try {
             return InetAddress.getByName(a).getAddress();
         } catch (Exception e) {
