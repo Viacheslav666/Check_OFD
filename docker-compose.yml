@@ -16,14 +16,14 @@ services:
     restart: unless-stopped
 
   server:
+    image: ${OFD_IMAGE:-ghcr.io/viacheslav666/check_ofd:latest}
     build: .
-    image: ofd-marking-server:1.0.0
     container_name: ofd-marking-server
     depends_on:
       db:
         condition: service_healthy
     ports:
-      # Хост:контейнер. На 8080 монитор — оставьте 18443.
+      # Host:container. Keep 18443 if :8080 is already used by a monitor.
       - "${OFD_HOST_PORT:-18443}:18443"
     environment:
       SERVER_PORT: "18443"

@@ -1,0 +1,25 @@
+# Profile for single-machine Windows desktop (no Docker / no external Postgres).
+# Data dir: OFD_DATA_DIR or ./data next to the jar.
+spring:
+  datasource:
+    url: jdbc:h2:file:${OFD_DATA_DIR:./data}/ofd;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;AUTO_SERVER=TRUE
+    username: ofd
+    password: ofd
+    driver-class-name: org.h2.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+server:
+  port: ${SERVER_PORT:18443}
+
+ofd:
+  mode: ${OFD_MODE:mock}
+  sync-on-startup: true
+
+logging:
+  file:
+    name: ${OFD_DATA_DIR:./data}/ofd-marking-server.log

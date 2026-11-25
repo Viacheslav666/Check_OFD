@@ -7,9 +7,9 @@ import java.time.Instant;
 @Table(name = "app_settings")
 public class AppSetting {
     @Id
-    @Column(length = 64)
+    @Column(name = "setting_key", length = 64)
     private String key;
-    @Column(nullable = false, columnDefinition = "text")
+    @Column(name = "setting_value", nullable = false, columnDefinition = "text")
     private String value;
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt = Instant.now();

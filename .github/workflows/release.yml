@@ -1,0 +1,106 @@
+name: Release CD
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  IMAGE: ghcr.io/viacheslav666/check_ofd
+  REGISTRY: ghcr.io
+
+jobs:
+  desktop-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Package desktop zip
+        shell: pwsh
+        run: .\scripts\windows\package-desktop.ps1
+      - name: Upload desktop zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows
+          path: dist/ofd-marking-desktop-windows.zip
+
+  server-image:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=,format=short
+      - name: Build and push image (optional)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  publish-release:
+    needs: [desktop-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download desktop artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-windows
+          path: artifacts
+      - name: Prepare release
+        run: |
+          mkdir -p release
+          cp artifacts/ofd-marking-desktop-windows.zip release/
+          cp scripts/windows/Install-Desktop.ps1 release/
+          SHORT_SHA="${GITHUB_SHA::7}"
+          echo "tag=desktop-${SHORT_SHA}" >> "$GITHUB_ENV"
+          cat > release/NOTES.md << EOF
+          # OFD Marking desktop ${SHORT_SHA}
+
+          **Без Docker.** На каждый RDP-ПК (свой исходящий IP в ОФД):
+
+          1. JDK 21+ (Temurin) в PATH
+          2. Распаковать \`ofd-marking-desktop-windows.zip\`
+          3. Для live: \`ofd-env.example.bat\` → \`ofd-env.bat\` (ключ API)
+          4. \`Start-OFD.bat\`
+
+          Или: \`Install-Desktop.ps1\` скачает последний release.
+          EOF
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.tag }}
+          name: Desktop ${{ env.tag }}
+          body_path: release/NOTES.md
+          files: |
+            release/ofd-marking-desktop-windows.zip
+            release/Install-Desktop.ps1
+          make_latest: true
+          target_commitish: ${{ github.sha }}

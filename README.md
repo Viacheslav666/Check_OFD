@@ -1,16 +1,35 @@
 # Доля маркированных чеков по торговым точкам (ОФД.ру)
 
-Сервис Windows Server + desktop-клиент JavaFX: сбор чеков из API [ОФД.ру](https://ofd.ru/razrabotchikam/ofd), хранение в PostgreSQL, расчёт доли чеков с маркированными товарами (ФФД 1.2: тег 1163 и/или SubjectType 31/33) по торговым точкам.
+Сервис + desktop-клиент JavaFX: сбор чеков из API [ОФД.ру](https://ofd.ru/razrabotchikam/ofd), расчёт доли чеков с маркированными товарами (ФФД 1.2: тег 1163 и/или SubjectType 31/33) по торговым точкам.
+
+**Для RDP / разных IP в ОФД:** ставьте **desktop-пакет на каждую машину** (локальный сервер + H2 + JavaFX). Docker не обязателен. См. [`docs/deploy-desktop.md`](docs/deploy-desktop.md).
 
 ## Состав
 
 | Модуль | Назначение |
 |---|---|
-| `server/` | Spring Boot 21, Flyway, сборщик ОФД, REST, WinSW |
+| `server/` | Spring Boot 21, Flyway, сборщик ОФД, REST (Postgres или встроенная H2) |
 | `client/` | JavaFX-клиент (дашборд, рейтинг, группы, матрица, чеки, Excel) |
-| `docs/` | ТЗ→requirements, API mapping, отчёты ролей |
+| `docs/` | ТЗ→requirements, API mapping, деплой |
 
-## Быстрый старт в Docker (рекомендуется, если Docker уже есть)
+## Windows desktop (без Docker) — основной вариант
+
+1. Нужен только **JDK 21+** (Temurin) в PATH.
+2. Скачайте `ofd-marking-desktop-windows.zip` из [Releases](https://github.com/Viacheslav666/Check_OFD/releases) **или**:
+
+```powershell
+irm https://raw.githubusercontent.com/Viacheslav666/Check_OFD/main/scripts/windows/Install-Desktop.ps1 -OutFile Install-Desktop.ps1
+.\Install-Desktop.ps1
+cd $env:USERPROFILE\OFD-Marking
+copy ofd-env.example.bat ofd-env.bat   # для live — пропишите OFD_API_KEY
+.\Start-OFD.bat
+```
+
+Данные: `%LOCALAPPDATA%\OFD-Marking\data`. Стоп: `Stop-OFD.bat`.
+
+CI/CD: каждый push в `main` публикует новый desktop zip в Releases.
+
+## Docker (опционально, если Docker уже есть)
 
 На машине с IP `10.10.50.2` или `192.168.31.196`:
 

@@ -1,0 +1,19 @@
+<!-- WinSW: optional Windows service for the desktop (H2) profile. -->
+<service>
+  <id>ofd-marking-desktop</id>
+  <name>OFD Marking Desktop Server</name>
+  <description>Локальный сбор чеков ОФД.ру (профиль desktop, H2)</description>
+  <executable>java</executable>
+  <arguments>-Xms256m -Xmx768m -jar "%BASE%\ofd-marking-server.jar" --spring.profiles.active=desktop</arguments>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>8</keepFiles>
+  </log>
+  <onfailure action="restart" delay="10 sec"/>
+  <env name="OFD_MODE" value="live"/>
+  <env name="OFD_API_KEY" value="SET_ME"/>
+  <env name="OFD_INN" value="XXXXXXXXXX"/>
+  <env name="OFD_DATA_DIR" value="%LOCALAPPDATA%\OFD-Marking\data"/>
+  <env name="SERVER_PORT" value="18443"/>
+  <workingdirectory>%BASE%</workingdirectory>
+</service>

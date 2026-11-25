@@ -4,7 +4,7 @@ CREATE TABLE trade_point (
     address         TEXT         NOT NULL,
     place           TEXT         NOT NULL,
     display_name    TEXT         NOT NULL,
-    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    created_at      TIMESTAMP WITH TIME ZONE  NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE kkt (
@@ -16,7 +16,7 @@ CREATE TABLE kkt (
     fn_number       VARCHAR(64),
     lk_path         TEXT,
     trade_point_id  BIGINT       NOT NULL REFERENCES trade_point(id),
-    last_seen_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    last_seen_at    TIMESTAMP WITH TIME ZONE  NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_kkt_trade_point ON kkt(trade_point_id);
@@ -35,12 +35,12 @@ CREATE TABLE receipt (
     doc_number          BIGINT,
     doc_shift_number    INT,
     receipt_number      INT,
-    doc_date_time       TIMESTAMPTZ  NOT NULL,
-    c_date_utc          TIMESTAMPTZ,
+    doc_date_time       TIMESTAMP WITH TIME ZONE  NOT NULL,
+    c_date_utc          TIMESTAMP WITH TIME ZONE,
     total_sum_kopecks   BIGINT       NOT NULL DEFAULT 0,
     fiscal_sign         VARCHAR(64),
     has_marked_goods    BOOLEAN      NOT NULL DEFAULT FALSE,
-    created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    created_at          TIMESTAMP WITH TIME ZONE  NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_receipt_tp_dt ON receipt(trade_point_id, doc_date_time);
@@ -75,21 +75,21 @@ CREATE TABLE nomenclature_rule (
 );
 
 CREATE TABLE app_settings (
-    key             VARCHAR(64) PRIMARY KEY,
-    value           TEXT         NOT NULL,
-    updated_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    setting_key     VARCHAR(64) PRIMARY KEY,
+    setting_value   TEXT         NOT NULL,
+    updated_at      TIMESTAMP WITH TIME ZONE  NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE sync_state (
     id                  BIGSERIAL PRIMARY KEY,
     kkt_reg_number      VARCHAR(32)  NOT NULL UNIQUE,
-    last_success_to     TIMESTAMPTZ,
-    last_attempt_at     TIMESTAMPTZ,
+    last_success_to     TIMESTAMP WITH TIME ZONE,
+    last_attempt_at     TIMESTAMP WITH TIME ZONE,
     last_error          TEXT,
     initial_done        BOOLEAN      NOT NULL DEFAULT FALSE
 );
 
-INSERT INTO app_settings(key, value) VALUES
+INSERT INTO app_settings(setting_key, setting_value) VALUES
     ('worst_threshold_percent', '25.0'),
     ('default_period_days', '30');
 

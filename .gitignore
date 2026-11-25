@@ -5,6 +5,9 @@ target/
 .project
 .settings/
 dist/
+data/
+.env
+ofd-env.bat
 *.log
 .ofd-marking/
 *.xlsx
