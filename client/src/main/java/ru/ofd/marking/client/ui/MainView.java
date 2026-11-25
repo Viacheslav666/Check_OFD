@@ -59,12 +59,31 @@ public class MainView extends BorderPane {
         Button refresh = new Button("Обновить");
         refresh.setOnAction(e -> refreshAll());
         Button sync = new Button("Синхронизация ОФД");
-        sync.setOnAction(e -> runAsync(() -> {
-            api.triggerSync();
-            Platform.runLater(() -> statusLabel.setText("Синхронизация запущена"));
-            Thread.sleep(2500);
-            Platform.runLater(this::refreshAll);
-        }));
+        sync.setOnAction(e -> {
+            sync.setDisable(true);
+            runAsync(() -> {
+                try {
+                    Platform.runLater(() -> statusLabel.setText("Синхронизация запущена…"));
+                    api.triggerSync();
+                    for (int i = 0; i < 120; i++) {
+                        Thread.sleep(1000);
+                        JsonNode st = api.syncStatus();
+                        boolean running = st.path("running").asBoolean(false);
+                        String msg = st.path("message").asText("-");
+                        Platform.runLater(() -> {
+                            syncLabel.setText("Синхронизация: " + msg + " [" + st.path("mode").asText("?") + "]");
+                            statusLabel.setText(running ? "Синхронизация…" : "Синхронизация завершена");
+                        });
+                        if (!running && i > 0) {
+                            break;
+                        }
+                    }
+                    Platform.runLater(this::refreshAll);
+                } finally {
+                    Platform.runLater(() -> sync.setDisable(false));
+                }
+            });
+        });
         Button export = new Button("Excel");
         export.setOnAction(e -> exportCurrent());
         Label brand = new Label("ОФД · Маркировка");

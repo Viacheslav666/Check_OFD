@@ -21,11 +21,13 @@ public class OfdProperties {
     private int maxDepthDays = 90;
     private int maxRetries = 5;
     private long retryBackoffMs = 2000;
-    private boolean syncOnStartup = true;
+    /** Manual sync via POST /api/sync/trigger (UI button). Off by default. */
+    private boolean syncOnStartup = false;
     private Scheduler scheduler = new Scheduler();
 
     public static class Scheduler {
-        private boolean enabled = true;
+        /** Periodic sync. Off by default — use the UI button. */
+        private boolean enabled = false;
         private String cron = "0 */15 * * * *";
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }

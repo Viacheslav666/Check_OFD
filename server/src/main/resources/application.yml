@@ -38,9 +38,9 @@ ofd:
   max-retries: 5
   retry-backoff-ms: 2000
   scheduler:
-    enabled: true
-    cron: "0 */15 * * * *" # каждые 15 минут
-  sync-on-startup: true
+    enabled: false # синк только по кнопке / API
+    cron: "0 */15 * * * *"
+  sync-on-startup: false
 
 app:
   client-api-key: ${CLIENT_API_KEY:}
